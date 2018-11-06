@@ -9,6 +9,8 @@ namespace SpeedTestLogger
     public class LoggerConfiguration
     {
         public readonly RegionInfo LoggerLocation;
+        public readonly string UserId;
+        public readonly int LoggerId;
         public LoggerConfiguration()
         {
             var builder = new ConfigurationBuilder()
@@ -17,6 +19,8 @@ namespace SpeedTestLogger
 
             var configuration = builder.Build();
             var countryCode = configuration["loggerLocationCountryCode"];
+            UserId = configuration["userId"];
+            LoggerId = Int32.Parse(configuration["loggerId"]);
             LoggerLocation = new RegionInfo(countryCode);
             Console.WriteLine("Logger located in {0}", LoggerLocation.EnglishName);
         }

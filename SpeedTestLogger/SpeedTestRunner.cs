@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Linq;
 using SpeedTest;
 using SpeedTest.Models;
+using SpeedTestLogger.Models;
 
 namespace SpeedTestLogger
 {
@@ -19,7 +20,7 @@ namespace SpeedTestLogger
             _location = location;
         }
 
-        public void RunSpeedTest()
+        public TestData RunSpeedTest()
         {
             Console.WriteLine("Finding best test servers");
             var server = FindBestTestServer();
@@ -31,7 +32,60 @@ namespace SpeedTestLogger
             Console.WriteLine("Testing upload speed");
             var uploadSpeed = TestUploadSpeed(server);
             Console.WriteLine("Upload speed was: {0} Mbps", uploadSpeed);
+
+            return new TestData
+            {
+                Speeds = new TestSpeeds
+                {
+                    Download = downloadSpeed,
+                    Upload = uploadSpeed
+                },
+                Client = new TestClient
+                {
+                    Ip = _settings.Client.Ip,
+                    Latitude = _settings.Client.Latitude,
+                    Longitude = _settings.Client.Longitude,
+                    Isp = _settings.Client.Isp,
+                    Country = _location.TwoLetterISORegionName
+                },
+                Server = new TestServer
+                {
+                    Host = server.Host,
+                    Latitude = server.Latitude,
+                    Longitude = server.Longitude,
+                    Country = GetISORegionNameFromEnglishName(server.Country),
+                    Distance = server.Distance,
+                    Ping = server.Latency,
+                    Id = server.Id
+                }
+            };
         }
+
+        private string GetISORegionNameFromEnglishName(string englishName)
+        {
+             // Wondering why this culture isn't supported? https://stackoverflow.com/a/41879861/840453
+        var unsupportedCultureLCID = 4096;
+        
+        var allRegions = CultureInfo
+            .GetCultures(CultureTypes.SpecificCultures)
+            .Select(culture => culture.LCID)
+            .Where(lcid => lcid != unsupportedCultureLCID)
+            .Select(lcid => new RegionInfo(lcid));
+        
+        var region = allRegions.FirstOrDefault(c =>
+        {
+            return String.Equals(c.EnglishName, englishName, StringComparison.OrdinalIgnoreCase);
+        });
+        
+        if (region == null)
+        {
+            var unknownISORegionName = "XX";
+            return unknownISORegionName;
+        }
+
+        return region.TwoLetterISORegionName;
+        }
+
         private Server FindBestTestServer()
         {
             var tenLocalServers = _settings.Servers
@@ -65,5 +119,6 @@ namespace SpeedTestLogger
         {
             return Math.Round(speed / 1024, 2);
         }
+        
     }
 }
